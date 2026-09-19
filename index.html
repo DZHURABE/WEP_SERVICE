@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OLED SERVICE | Управление складом</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --navy:#10213d; --navy-2:#17355d; --ink:#162235; --muted:#718099; --line:#e8edf4; --surface:#fff; --bg:#f5f8fc; --blue:#2c73ff; --mint:#1bc59b; --red:#f04f63; --yellow:#f6ae28; --shadow:0 14px 40px rgba(24,54,97,.08); }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--bg); font-family:Manrope,Arial,sans-serif; }
+    button,input { font:inherit; }
+    button { border:0; cursor:pointer; }
+    .app { min-height:100vh; display:flex; }
+    .sidebar { width:250px; background:var(--navy); color:white; padding:25px 17px; display:flex; flex-direction:column; flex-shrink:0; }
+    .brand { display:flex; gap:11px; align-items:center; padding:5px 12px 34px; }
+    .brand-mark { width:37px; height:37px; border-radius:12px; display:grid; place-items:center; position:relative; overflow:visible; background:linear-gradient(135deg,#54d9ff,#5079ff); font-weight:800; font-family:'Space Grotesk'; box-shadow:0 7px 18px #4d9dff55; animation:logoFloat 3.8s ease-in-out infinite; }
+    .brand-mark:before { content:''; position:absolute; inset:-4px; border:1px solid rgba(84,217,255,.6); border-radius:14px; animation:logoOrbit 4.5s linear infinite; }
+    .brand-mark:after { content:'✦'; position:absolute; right:-7px; top:-9px; color:#8ffbea; font-size:11px; text-shadow:0 0 9px #54d9ff; animation:logoSpark 1.8s ease-in-out infinite; }
+    .brand-mark .logo-glyph { position:absolute; left:7px; top:6px; color:#fff; font-size:11px; line-height:1; opacity:.95; }
+    .brand-mark .logo-initials { margin-top:8px; font-size:11px; letter-spacing:-.5px; }
+    @keyframes logoFloat { 0%,100% { transform:translateY(0) rotate(0); } 50% { transform:translateY(-3px) rotate(2deg); } }
+    @keyframes logoOrbit { to { transform:rotate(360deg); } }
+    @keyframes logoSpark { 0%,100% { opacity:.35; transform:scale(.8) rotate(0); } 50% { opacity:1; transform:scale(1.2) rotate(18deg); } }
+    @media (prefers-reduced-motion: reduce) { .brand-mark, .brand-mark:before, .brand-mark:after { animation:none; } }
+    .brand strong { display:block; font-family:'Space Grotesk'; font-size:16px; line-height:1; letter-spacing:.7px; background:linear-gradient(90deg,#fff 15%,#a9efff 45%,#fff 75%); background-size:220% auto; -webkit-background-clip:text; background-clip:text; color:transparent; animation:brandShine 5s linear infinite; }
+    .brand span { display:block; font-size:9px; color:#96b2d8; letter-spacing:1.8px; margin-top:6px; white-space:nowrap; }
+    @keyframes brandShine { from { background-position:220% center; } to { background-position:-20% center; } }
+    .nav-label { text-transform:uppercase; font-size:10px; letter-spacing:1.8px; color:#6f8daf; margin:0 13px 10px; }
+    nav { display:grid; gap:6px; }
+    .nav-item { color:#abc0dd; background:transparent; padding:12px 13px; border-radius:11px; text-align:left; display:flex; gap:12px; align-items:center; font-size:13px; transition:.2s; }
+    .nav-item:hover,.nav-item.active { color:#fff; background:#234a7c; }
+    .nav-icon { width:31px; height:31px; display:grid; place-items:center; text-align:center; font-size:16px; border-radius:10px; color:#bfe9ff; background:rgba(255,255,255,.1); border:1px solid rgba(145,211,255,.18); transition:transform .25s, background .25s, box-shadow .25s; }
+    .nav-item:hover .nav-icon, .nav-item.active .nav-icon { color:#fff; background:rgba(84,174,255,.34); box-shadow:0 5px 14px rgba(84,174,255,.2); transform:translateY(-2px) scale(1.06); }
+    .sidebar-bottom { margin-top:auto; padding:15px 10px 2px; }
+    .help { background:#19365e; border:1px solid #2a5485; border-radius:15px; padding:15px; }
+    .help p { font-size:12px; line-height:1.55; color:#b5c9e4; margin:0 0 12px; }
+    .whatsapp-help { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px 12px; border-radius:9px; background:#25d366; color:#fff; text-decoration:none; font-size:11px; font-weight:800; box-shadow:0 7px 18px rgba(37,211,102,.24); animation:whatsappPulse 2.2s ease-in-out infinite; transition:transform .2s, box-shadow .2s; }
+    .whatsapp-help:hover { color:#fff; transform:translateY(-2px); box-shadow:0 10px 24px rgba(37,211,102,.38); }
+    .whatsapp-icon { width:22px; height:22px; border:2px solid currentColor; border-radius:50%; display:grid; place-items:center; font-size:12px; line-height:1; background:rgba(255,255,255,.12); }
+    @keyframes whatsappPulse { 0%,100% { box-shadow:0 7px 18px rgba(37,211,102,.24); } 50% { box-shadow:0 7px 22px rgba(37,211,102,.55), 0 0 0 5px rgba(37,211,102,.08); } }
+    .main { flex:1; min-width:0; position:relative; isolation:isolate; overflow:hidden; background:linear-gradient(135deg,#dceeff 0%,#edf7ff 48%,#f7fcff 100%); }
+    .main:before { content:''; position:absolute; z-index:-1; inset:-18%; pointer-events:none; background:radial-gradient(circle at 12% 22%,rgba(77,166,255,.38),transparent 23%),radial-gradient(circle at 84% 18%,rgba(99,211,255,.3),transparent 26%),radial-gradient(circle at 56% 92%,rgba(112,188,255,.22),transparent 25%); filter:blur(18px); animation:lightFlow 13s ease-in-out infinite alternate; }
+    .main:after { content:''; position:absolute; z-index:-1; width:560px; height:560px; right:-220px; top:120px; border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,.62) 0 8%,rgba(139,213,255,.22) 28%,transparent 68%); filter:blur(3px); pointer-events:none; animation:lightOrbit 11s ease-in-out infinite; }
+    .main .content:before { content:''; position:absolute; z-index:-1; width:420px; height:420px; left:-190px; top:120px; border-radius:50%; background:radial-gradient(circle, rgba(41,133,255,.22), rgba(41,133,255,.08) 38%, transparent 70%); filter:blur(5px); pointer-events:none; animation:blueGlow 8s ease-in-out infinite; }
+    @keyframes lightFlow { from { transform:translate3d(-2%,0,0) scale(1); } to { transform:translate3d(3%,2%,0) scale(1.08); } }
+    @keyframes lightOrbit { 0%,100% { transform:translate3d(0,0,0) scale(.92); opacity:.7; } 50% { transform:translate3d(-90px,65px,0) scale(1.1); opacity:1; } }
+    @keyframes blueGlow { 0%,100% { opacity:.45; transform:scale(1); } 50% { opacity:.9; transform:scale(1.18) translate(25px,-12px); } }
+    @media (prefers-reduced-motion: reduce) { .main:before, .main:after, .main .content:before { animation:none; } }
+    .topbar { height:76px; background:#fff; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; padding:0 34px; }
+    .crumb { color:var(--muted); font-size:13px; } .crumb b { color:var(--ink); }
+    .top-actions { display:flex; align-items:center; gap:22px; }
+    .lang-switch { display:flex; gap:3px; padding:3px; border:1px solid var(--line); border-radius:8px; background:#f8fafc; }
+    .lang-switch button { padding:5px 8px; border-radius:6px; background:transparent; color:#8794a8; font-size:10px; font-weight:800; }
+    .lang-switch button.active { background:var(--navy); color:#fff; }
+    .icon-btn { width:36px; height:36px; border-radius:12px; background:rgba(235,245,255,.8); border:1px solid #dceafb; color:#4f83ce; font-size:19px; position:relative; transition:transform .2s, box-shadow .2s; }
+    .icon-btn:hover { transform:translateY(-2px) rotate(-4deg); box-shadow:0 8px 18px rgba(44,115,255,.18); }
+    .dot { width:7px; height:7px; background:var(--red); border-radius:99px; position:absolute; top:0; right:-1px; border:1px solid white; }
+    .profile-wrap { position:relative; }
+    .profile { display:flex; gap:10px; align-items:center; font-size:12px; cursor:pointer; padding:5px 7px; border-radius:10px; transition:.2s; }
+    .profile:hover { background:#f3f7fb; }
+    .avatar { width:34px;height:34px;border-radius:50%;background:#d7f5ed;color:#187963;display:grid;place-items:center;font-weight:800; }
+    .profile small { color:var(--muted); display:block; margin-top:2px; }
+    .profile-menu { position:absolute; z-index:50; top:calc(100% + 12px); right:0; width:220px; padding:10px; background:#fff; border:1px solid var(--line); border-radius:13px; box-shadow:0 18px 45px rgba(24,54,97,.16); opacity:0; visibility:hidden; transform:translateY(-6px); transition:.2s; }
+    .profile-menu.open { opacity:1; visibility:visible; transform:none; }
+    .profile-menu-title { padding:7px 9px 9px; color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:1px; font-weight:800; }
+    .profile-menu label { display:block; padding:0 8px 5px; color:var(--muted); font-size:11px; }
+    .profile-menu select { width:100%; border:1px solid var(--line); border-radius:8px; padding:9px; color:var(--ink); background:#f8fafc; font-size:12px; outline:0; }
+    .logout-btn { width:100%; margin-top:9px; padding:9px; border-radius:8px; text-align:left; color:var(--red); background:#fff1f3; font-size:12px; font-weight:800; cursor:pointer; }
+    .content { padding:28px 34px 45px; max-width:1500px; margin:auto; }
+    #dashboardView:not(.active) { display:none; }
+    .page-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px; } .page-head h1 { font:700 23px 'Space Grotesk'; margin:0 0 6px; } .page-head p { margin:0; color:var(--muted); font-size:12px; }
+    .head-actions { display:flex; gap:10px; align-items:center; }
+    .primary-btn { background:var(--blue); color:#fff; border-radius:9px; padding:11px 15px; font-size:12px; font-weight:800; box-shadow:0 7px 18px #2c73ff35; }
+    .date-wrap { position:relative; }
+    .date { border:1px solid var(--line); background:rgba(255,255,255,.92); border-radius:10px; padding:10px 13px; color:#65758d; font-size:12px; cursor:pointer; transition:transform .2s, border-color .2s, box-shadow .2s; }
+    .date:hover, .date.active { transform:translateY(-2px); border-color:#a9c5ff; box-shadow:0 9px 22px rgba(44,115,255,.14); color:var(--blue); }
+    .calendar-popover { position:absolute; z-index:45; top:calc(100% + 10px); right:0; width:286px; padding:15px; border:1px solid var(--line); border-radius:15px; background:#fff; box-shadow:0 18px 45px rgba(24,54,97,.16); opacity:0; visibility:hidden; transform:translateY(-7px) scale(.98); transition:.2s; }
+    .calendar-popover.open { opacity:1; visibility:visible; transform:none; }
+    .calendar-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .calendar-title { color:var(--ink); font:700 13px 'Space Grotesk'; text-transform:capitalize; }
+    .calendar-nav { width:27px; height:27px; border-radius:8px; color:var(--muted); background:#f2f6fb; }
+    .calendar-nav:hover { color:var(--blue); background:#eaf2ff; }
+    .calendar-week, .calendar-days { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; text-align:center; }
+    .calendar-week { color:#a1aec0; font-size:9px; margin-bottom:5px; }
+    .calendar-day { min-height:29px; border-radius:8px; background:transparent; color:var(--ink); font-size:11px; cursor:pointer; }
+    .calendar-day:hover { color:var(--blue); background:#eaf2ff; }
+    .calendar-day.muted { color:#c2cad5; }
+    .calendar-day.today { color:#fff; background:var(--blue); box-shadow:0 5px 12px rgba(44,115,255,.25); }
+    .calendar-day.selected { outline:2px solid #9ebcff; outline-offset:-2px; }
+    .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:17px; margin-bottom:22px; }
+    .stat { background:rgba(255,255,255,.72); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,.86); border-radius:18px; padding:20px; box-shadow:0 16px 38px rgba(46,121,190,.12); position:relative; overflow:hidden; transition:transform .25s, box-shadow .25s, border-color .25s; } .stat:hover { transform:translateY(-5px); border-color:#fff; box-shadow:0 20px 42px rgba(46,121,190,.2); } .stat:after { content:''; position:absolute; width:65px;height:65px;border-radius:50%;background:rgba(111,190,255,.2);right:-22px;top:-22px; transition:transform .35s; } .stat:hover:after { transform:scale(1.45); } .stat.green:after { background:rgba(81,218,181,.2); } .stat.orange:after { background:rgba(255,201,94,.24); } .stat.red:after { background:rgba(255,119,137,.2); }
+    .stat-top { display:flex; justify-content:space-between; color:var(--muted); font-size:11px; position:relative;z-index:1; } .stat-icon { width:32px; height:32px; display:grid; place-items:center; border-radius:10px; color:var(--blue); background:rgba(255,255,255,.76); border:1px solid rgba(255,255,255,.9); box-shadow:0 7px 16px rgba(44,115,255,.12); font-size:16px; transition:transform .3s, background .3s, box-shadow .3s; } .stat:hover .stat-icon { transform:rotate(-8deg) scale(1.12); background:#fff; box-shadow:0 9px 20px rgba(44,115,255,.22); } .stat.green .stat-icon { color:#159473; } .stat.orange .stat-icon { color:#c78516; } .stat.red .stat-icon { color:var(--red); } .stat h2 { font:700 22px 'Space Grotesk'; margin:13px 0 4px; } .stat-foot { font-size:10px; color:var(--muted); } .up { color:var(--mint); font-weight:700; }
+    .section-grid { display:grid; grid-template-columns:1.55fr 1fr; gap:18px; margin-bottom:20px; } .panel { background:rgba(255,255,255,.94); border:1px solid var(--line); border-radius:15px; box-shadow:var(--shadow); padding:18px; transition:transform .25s, box-shadow .25s, border-color .25s; } .panel:hover { transform:translateY(-3px); border-color:#c5d7f5; box-shadow:0 18px 35px rgba(24,54,97,.12); } .panel-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:15px; } .panel-head h3 { font:600 14px 'Space Grotesk'; margin:0; } .panel-head a { color:var(--blue); font-size:11px; font-weight:700; cursor:pointer; }
+    .chart-wrap { height:200px; position:relative; } .chart-svg { width:100%; height:100%; overflow:visible; } .chart-labels { display:flex; justify-content:space-between; color:#a1aec0; font-size:10px; margin-top:5px; }
+    .month-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-top:18px; padding-top:16px; border-top:1px solid #edf1f6; }
+    .month-stat { min-width:0; } .month-stat-label { display:block; color:var(--muted); font-size:10px; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .month-stat-value { display:block; color:var(--ink); font:700 15px 'Space Grotesk'; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .month-stat.profit .month-stat-value { color:var(--mint); } .month-stat.margin .month-stat-value { color:var(--blue); }
+    .stock-list { display:grid; gap:14px; } .stock-row { display:grid; grid-template-columns:1fr 85px 32px; align-items:center; gap:15px; font-size:12px; } .stock-name { font-weight:700; } .stock-detail { display:block; color:#718099; font-size:10px; font-weight:500; margin-top:3px; } .stock-code { color:#9aa6b8; font-size:10px; margin-top:3px; } .bar { height:7px; border-radius:9px; background:#eef2f6; overflow:hidden; margin-top:7px; } .fill { height:100%; background:var(--mint); border-radius:9px; } .fill.warn { background:var(--yellow); } .fill.danger { background:var(--red); } .stock-num { text-align:right; font-weight:700; color:#62728a; } .alert { color:var(--red); font-size:17px; text-align:right; }
+    .table-panel { padding:0; overflow:hidden; } .table-panel .panel-head { padding:18px 18px 0; } table { width:100%; border-collapse:collapse; font-size:11px; } th { color:#94a0b2; text-transform:uppercase; font-size:9px; letter-spacing:.7px; text-align:left; padding:11px 18px; background:rgba(247,251,255,.78); } td { padding:12px 18px; border-top:1px solid rgba(221,235,249,.75); } .product { display:flex; gap:9px; align-items:center; font-weight:700; } .product-thumb { width:32px;height:32px;border-radius:10px;background:rgba(229,242,255,.88);border:1px solid #d5e8fb;color:#4b83ee;display:grid;place-items:center;font-size:14px;box-shadow:0 5px 12px rgba(44,115,255,.1); transition:transform .25s, box-shadow .25s; } .product:hover .product-thumb { transform:rotate(-6deg) scale(1.08); box-shadow:0 8px 16px rgba(44,115,255,.18); } .badge { padding:4px 7px; border-radius:6px; font-size:9px; font-weight:700; } .badge.ok { background:#e8fbf5;color:#159473; } .badge.low { background:#ffeaed;color:#dc4255; } .money { font-weight:700; }
+    .login-screen { position:fixed; z-index:20; inset:0; display:grid; place-items:center; background:linear-gradient(125deg,#0d2041 0%,#193a68 47%,#1b75a7 100%); overflow:hidden; transition:.45s; } .login-screen:before,.login-screen:after { content:''; position:absolute; border-radius:50%; filter:blur(1px); opacity:.36; } .login-screen:before { width:480px;height:480px;right:-140px;top:-160px;background:#45ddcf; } .login-screen:after { width:350px;height:350px;left:-130px;bottom:-100px;background:#5472ff; }
+    .login-glass { width:min(430px,calc(100% - 38px)); padding:37px; border-radius:24px; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.32); box-shadow:0 25px 70px #00163360; backdrop-filter:blur(22px); color:white; position:relative; z-index:1; animation:rise .6s ease both; } .login-logo { width:64px; height:64px; border-radius:20px; margin:0 auto 22px; } .login-logo .logo-initials { font-size:16px; } .login-logo .logo-glyph { left:13px; top:11px; font-size:15px; } .login-glass h1 { font:700 clamp(25px,6vw,31px) 'Space Grotesk'; letter-spacing:1.2px; text-align:center; margin:0 0 9px; } .login-glass > p { text-align:center;color:#d5e5f8;font-size:12px;line-height:1.6;margin:0 0 27px; } .input-label { display:block; color:#dceafa; font-size:11px; margin-bottom:7px; } .login-field { margin-top:11px; } .email-input { width:100%; padding:14px 15px; border-radius:10px; border:1px solid rgba(255,255,255,.4); background:rgba(255,255,255,.14); color:white; outline:0; } .email-input::placeholder { color:#c2d3e9; } .login-btn { width:100%; margin-top:14px; padding:14px; border-radius:10px; background:#fff; color:#194175; font-weight:800; font-size:13px; box-shadow:0 8px 25px #00163335; transition:transform .2s, box-shadow .2s; } .login-btn:hover { transform:translateY(-2px); box-shadow:0 12px 28px #00163350; } .login-note { font-size:10px!important; margin:17px 0 0!important; opacity:.75; } .login-hide { opacity:0; visibility:hidden; pointer-events:none; transform:scale(1.03); } @keyframes rise { from { opacity:0; transform:translateY(15px); } to { opacity:1; transform:none; } }
+    .toast { position:fixed; right:25px; bottom:25px; z-index:30; background:#10213d;color:white;padding:13px 17px;border-radius:10px; font-size:12px; box-shadow:var(--shadow); transform:translateY(90px); transition:.3s; } .toast.show { transform:none; }
+    .modal-backdrop { position:fixed; inset:0; z-index:40; display:grid; place-items:center; background:#10213d75; backdrop-filter:blur(5px); opacity:0; visibility:hidden; transition:.25s; padding:20px; }
+    .modal-backdrop.open { opacity:1; visibility:visible; }
+    .modal { width:min(620px,100%); max-height:calc(100vh - 40px); overflow:auto; background:#fff; border-radius:18px; padding:25px; box-shadow:0 25px 80px #10213d45; transform:translateY(15px); transition:.25s; }
+    .modal-backdrop.open .modal { transform:none; }
+    .modal-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; } .modal-head h2 { font:700 20px 'Space Grotesk'; margin:0 0 5px; } .modal-head p { margin:0; color:var(--muted); font-size:11px; } .close-btn { background:#f1f4f8; color:#718099; border-radius:8px; width:30px; height:30px; font-size:18px; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; } .form-field.full { grid-column:1/-1; } .form-field label { display:block; color:#66758b; font-size:11px; font-weight:700; margin-bottom:6px; } .form-field input,.form-field select { width:100%; border:1px solid #dfe6ef; border-radius:8px; padding:11px 12px; outline:0; color:var(--ink); background:#fff; font-size:12px; } .form-field input:focus,.form-field select:focus { border-color:var(--blue); box-shadow:0 0 0 3px #2c73ff15; } .modal-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:22px; } .secondary-btn { background:#f1f4f8; color:#62728a; border-radius:9px; padding:11px 15px; font-size:12px; font-weight:700; }
+    .app-view { padding:26px 34px 40px; max-width:1500px; margin:auto; display:none; } .app-view.active { display:block; } .view-title { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; } .view-title h1 { font:700 23px 'Space Grotesk'; margin:0 0 6px; } .view-title p { margin:0; color:var(--muted); font-size:12px; } .view-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:15px; margin-bottom:18px; } .view-card { background:#fff; border:1px solid var(--line); border-radius:15px; padding:17px; box-shadow:var(--shadow); } .view-card h3 { margin:0 0 7px; font:600 14px 'Space Grotesk'; } .view-card strong { font:700 22px 'Space Grotesk'; } .view-card p { color:var(--muted); font-size:10px; margin:6px 0 0; } .view-table { background:#fff; border:1px solid var(--line); border-radius:15px; box-shadow:var(--shadow); overflow:auto; } .view-table table { min-width:650px; } .empty-note { color:var(--muted); font-size:11px; text-align:center; padding:30px; }
+    @media (prefers-reduced-motion: reduce) { .brand strong { animation:none; } }
+    @media (max-width:950px) { .sidebar { width:70px; padding:20px 10px; } .brand { padding:5px 6px 30px; } .brand-text,.nav-label,.nav-item span:not(.nav-icon),.help { display:none; } .nav-item { justify-content:center;padding:13px 4px; } .content,.app-view { padding:24px 20px 35px; } .topbar { padding:0 20px; } }
+    @media (max-width:700px) { .stat-grid,.view-grid { grid-template-columns:repeat(2,1fr); } .section-grid { grid-template-columns:1fr; } .top-actions .profile div:last-child { display:none; } .page-head,.view-title { align-items:stretch; gap:14px; flex-direction:column; } .date { align-self:flex-start; } .table-panel { overflow:auto; } table { min-width:580px; } }
+  </style>
+</head>
+<body>
+  <div class="login-screen" id="loginScreen">
+    <form class="login-glass" id="loginForm">
+      <div class="brand-mark login-logo"><span class="logo-glyph">◈</span><span class="logo-initials">OS</span></div>
+      <h1>OLED SERVICE</h1>
+      <p>Управляйте складом из одного места.<br>Все расчёты всегда под контролем.</p>
+      <div class="login-field"><label class="input-label" id="firstNameLabel" for="firstName">Имя</label><input class="email-input" id="firstName" type="text" placeholder="Алексей" required></div>
+      <div class="login-field"><label class="input-label" id="lastNameLabel" for="lastName">Фамилия</label><input class="email-input" id="lastName" type="text" placeholder="Каримов" required></div>
+      <div class="login-field"><label class="input-label" id="phoneLabel" for="phone">Номер телефона</label><input class="email-input" id="phone" type="tel" placeholder="+998 90 000 00 00" required></div>
+      <button class="login-btn" type="submit">Зарегистрироваться <span>→</span></button>
+      <p class="login-note">Продолжая, вы принимаете условия сервиса</p>
+    </form>
+  </div>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark"><span class="logo-glyph">◈</span><span class="logo-initials">OS</span></div><div class="brand-text"><strong>OLED SERVICE</strong><span>СКЛАДСКАЯ СИСТЕМА</span></div></div>
+      <div class="nav-label">Основное меню</div>
+      <nav>
+        <button class="nav-item active" data-view="dashboard"><span class="nav-icon">▦</span><span>Панель</span></button>
+        <button class="nav-item" data-view="inventory"><span class="nav-icon">▤</span><span>Остатки</span></button>
+        <button class="nav-item" data-view="sales"><span class="nav-icon">↗</span><span>Продажи</span></button>
+        <button class="nav-item" data-view="reports"><span class="nav-icon">◒</span><span>Отчёты</span></button>
+      </nav>
+      <div class="sidebar-bottom"><div class="help"><p>Есть вопросы?<br>Мы готовы помочь.</p><a class="whatsapp-help" id="helpBtn" href="https://wa.me/992939911199" target="_blank" rel="noopener noreferrer" aria-label="Открыть WhatsApp"><span class="whatsapp-icon">⌕</span><span>Написать в WhatsApp</span></a></div></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div class="crumb" id="breadcrumb">Главная <span>/</span> <b>Панель управления</b></div><div class="top-actions"><button class="icon-btn" id="bellBtn">♧<i class="dot"></i></button><div class="profile-wrap"><div class="profile" id="profileBtn" role="button" tabindex="0" aria-expanded="false"><div class="avatar" id="profileAvatar">AS</div><div><b id="profileName">Admin Service</b><small id="userPhone"></small></div></div><div class="profile-menu" id="profileMenu" aria-hidden="true"><div class="profile-menu-title">Настройки аккаунта</div><label for="languageSelect">Язык интерфейса</label><select id="languageSelect"><option value="ru">Русский</option><option value="tg">Тоҷикӣ</option></select><button class="logout-btn" id="logoutBtn" type="button">↪ Выйти из аккаунта</button></div></div></div></header>
+      <section class="content active" id="dashboardView">
+        <div class="page-head"><div><h1 id="welcomeTitle">Здравствуйте, Admin <span>👋</span></h1><p id="welcomeText">Сводка состояния склада на сегодня.</p></div><div class="head-actions"><button class="primary-btn" id="addProductBtn" type="button">＋ <span id="addProductLabel">Добавить товар</span></button><div class="date-wrap"><button class="date" id="dateLabel" type="button" aria-expanded="false">◷ &nbsp; 19 сентября, 2026</button><div class="calendar-popover" id="calendarPopover" aria-hidden="true"><div class="calendar-head"><button class="calendar-nav" id="calendarPrev" type="button" aria-label="Предыдущий месяц">‹</button><strong class="calendar-title" id="calendarTitle"></strong><button class="calendar-nav" id="calendarNext" type="button" aria-label="Следующий месяц">›</button></div><div class="calendar-week"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div><div class="calendar-days" id="calendarDays"></div></div></div></div></div>
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-top"><span>Всего товаров</span><span class="stat-icon">▤</span></div><h2>0</h2><div class="stat-foot"><span class="up">↑ 0%</span> &nbsp; к прошлому месяцу</div></div>
+          <div class="stat green"><div class="stat-top"><span>Продажи сегодня</span><span class="stat-icon">↗</span></div><h2>0</h2><div class="stat-foot"><span class="up">↑ 0%</span> &nbsp; к прошлому месяцу</div></div>
+          <div class="stat orange"><div class="stat-top"><span>Ожидаемые заказы</span><span class="stat-icon">◫</span></div><h2>0</h2><div class="stat-foot">Ожидается доставка</div></div>
+          <div class="stat red"><div class="stat-top"><span>Мало на складе</span><span class="stat-icon">!</span></div><h2>0</h2><div class="stat-foot"><span style="color:var(--red);font-weight:700">Нужна проверка</span> &nbsp; сейчас</div></div>
+        </div>
+        <div class="section-grid"><div class="panel"><div class="panel-head"><h3>Динамика продаж</h3><a id="periodBtn">Этот месяц⌄</a></div><div class="chart-wrap"><svg class="chart-svg" viewBox="0 0 650 200" preserveAspectRatio="none"><g stroke="#edf1f6" stroke-width="1"><line x1="0" y1="25" x2="650" y2="25"/><line x1="0" y1="75" x2="650" y2="75"/><line x1="0" y1="125" x2="650" y2="125"/><line x1="0" y1="175" x2="650" y2="175"/></g><defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c73ff" stop-opacity=".23"/><stop offset="1" stop-color="#2c73ff" stop-opacity="0"/></linearGradient></defs><path d="M0 155 C40 145 53 162 92 128 S137 122 170 137 S212 85 252 103 S291 130 325 83 S368 54 400 78 S449 95 478 45 S513 67 540 30 S592 52 650 18 L650 200 L0 200Z" fill="url(#area)"/><path d="M0 155 C40 145 53 162 92 128 S137 122 170 137 S212 85 252 103 S291 130 325 83 S368 54 400 78 S449 95 478 45 S513 67 540 30 S592 52 650 18" fill="none" stroke="#2c73ff" stroke-width="3" stroke-linecap="round"/><circle cx="540" cy="30" r="5" fill="#fff" stroke="#2c73ff" stroke-width="3"/></svg></div><div class="chart-labels"><span>01 сент.</span><span>07 сент.</span><span>14 сент.</span><span>21 сент.</span><span>28 сент.</span></div><div class="month-stats"><div class="month-stat"><span class="month-stat-label" id="monthRevenueLabel">Выручка</span><strong class="month-stat-value" id="monthRevenue">0 сум</strong></div><div class="month-stat"><span class="month-stat-label" id="monthCostLabel">Себестоимость</span><strong class="month-stat-value" id="monthCost">0 сум</strong></div><div class="month-stat profit"><span class="month-stat-label" id="monthProfitLabel">Прибыль</span><strong class="month-stat-value" id="monthProfit">0 сум</strong></div><div class="month-stat margin"><span class="month-stat-label" id="monthMarginLabel">Рентабельность</span><strong class="month-stat-value" id="monthMargin">0%</strong></div></div></div>
+          <div class="panel"><div class="panel-head"><h3>Товары с низким остатком</h3><a data-view-link="inventory">Все →</a></div><div class="stock-list"><div class="stock-row"><div><div class="stock-name">OLED 55" C2</div><div class="stock-code">LG-OLED-C2-55</div><div class="bar"><div class="fill danger" style="width:18%"></div></div></div><div class="stock-num">4 шт.</div><div class="alert">!</div></div><div class="stock-row"><div><div class="stock-name">OLED 65" A80J</div><div class="stock-code">SN-A80J-65</div><div class="bar"><div class="fill warn" style="width:35%"></div></div></div><div class="stock-num">8 шт.</div><div class="alert">!</div></div><div class="stock-row"><div><div class="stock-name">OLED 48" C3</div><div class="stock-code">LG-OLED-C3-48</div><div class="bar"><div class="fill warn" style="width:41%"></div></div></div><div class="stock-num">11 шт.</div><div class="alert">!</div></div></div></div></div>
+        <div class="panel table-panel"><div class="panel-head"><h3>Последние продажи</h3><a data-view-link="sales">Посмотреть все →</a></div><table><thead><tr><th>Товар</th><th>Клиент</th><th>Дата</th><th>Сумма</th><th>Статус</th></tr></thead><tbody><tr><td><div class="product"><div class="product-thumb">▣</div><div>OLED 55" C3<br><small class="stock-code">LG-OLED-C3-55</small></div></div></td><td>Techno House</td><td>Сегодня, 14:32</td><td class="money">0 сум</td><td><span class="badge ok">Завершено</span></td></tr><tr><td><div class="product"><div class="product-thumb">▣</div><div>OLED 65" G3<br><small class="stock-code">LG-OLED-G3-65</small></div></div></td><td>Smart Market</td><td>Сегодня, 11:08</td><td class="money">0 сум</td><td><span class="badge ok">Завершено</span></td></tr><tr><td><div class="product"><div class="product-thumb">▣</div><div>OLED 48" C3<br><small class="stock-code">LG-OLED-C3-48</small></div></div></td><td>Home Electronics</td><td>Вчера, 18:20</td><td class="money">0 сум</td><td><span class="badge low">На проверке</span></td></tr></tbody></table></div>
+      </section>
+      <section class="app-view" id="inventoryView"><div class="view-title"><div><h1 id="inventoryTitle">Остатки на складе</h1><p id="inventoryText">Управляйте всеми телефонами и OLED-экранами на складе.</p></div><button class="primary-btn add-view-product" type="button">＋ <span>Добавить товар</span></button></div><div class="view-grid"><div class="view-card"><h3 id="inventoryCountTitle">Все товары</h3><strong id="inventoryCount">0</strong><p id="inventoryCountText">шт. на складе</p></div><div class="view-card"><h3 id="inventoryLowTitle">Мало на складе</h3><strong style="color:var(--red)">0</strong><p id="inventoryLowText">моделей требуют проверки</p></div><div class="view-card"><h3 id="inventoryValueTitle">Стоимость склада</h3><strong>0</strong><p id="inventoryValueText">руб. общая стоимость</p></div></div><div class="view-table"><table><thead><tr><th>Товар</th><th>Тип</th><th>Размер / память</th><th>Код</th><th>Остаток</th><th>Статус</th></tr></thead><tbody id="inventoryTableBody"><tr><td>OLED 55" C3</td><td>OLED экран</td><td>55 дюйм</td><td>LG-OLED-C3-55</td><td>0</td><td><span class="badge ok">Норма</span></td></tr><tr><td>iPhone 16 Pro</td><td>Телефон</td><td>256 GB</td><td>APL-IP16P</td><td>0</td><td><span class="badge low">Мало</span></td></tr></tbody></table></div></section>
+      <section class="app-view" id="salesView"><div class="view-title"><div><h1 id="salesTitle">Продажи</h1><p id="salesText">Контролируйте все продажи телефонов и OLED-экранов.</p></div><button class="primary-btn" id="newSaleBtn" type="button">＋ <span>Новая продажа</span></button></div><div class="view-grid"><div class="view-card"><h3 id="salesTodayTitle">Продажи сегодня</h3><strong>0</strong><p>руб. · ↑ 0%</p></div><div class="view-card"><h3 id="salesCountTitle">Количество продаж</h3><strong>0</strong><p id="salesCountText">операций сегодня</p></div><div class="view-card"><h3 id="salesAverageTitle">Средний чек</h3><strong>0</strong><p id="salesAverageText">руб. за продажу</p></div></div><div class="view-table"><table><thead><tr><th>Товар</th><th>Клиент</th><th>Дата</th><th>Сумма</th><th>Статус</th></tr></thead><tbody><tr><td>OLED 55" C3</td><td>Techno House</td><td>Сегодня, 14:32</td><td>0 сум</td><td><span class="badge ok">Завершено</span></td></tr><tr><td>OLED 65" G3</td><td>Smart Market</td><td>Сегодня, 11:08</td><td>0 сум</td><td><span class="badge ok">Завершено</span></td></tr></tbody></table></div></section>
+      <section class="app-view" id="reportsView"><div class="view-title"><div><h1 id="reportsTitle">Отчёты</h1><p id="reportsText">Просматривайте отчёты по складу и продажам в одном месте.</p></div><button class="primary-btn" id="exportBtn" type="button">↓ <span id="exportLabel">Экспортировать отчёт</span></button></div><div class="view-grid"><div class="view-card"><h3 id="reportProfitTitle">Доход за месяц</h3><strong>0</strong><p id="reportProfitText">руб. рассчитанная прибыль</p></div><div class="view-card"><h3 id="reportStockTitle">Оборот склада</h3><strong>0%</strong><p id="reportStockText">эффективность месяца</p></div><div class="view-card"><h3 id="reportBestTitle">Лидер продаж</h3><strong>0</strong><p id="reportBestText">0 шт. в этом месяце</p></div></div><div class="panel"><div class="panel-head"><h3 id="reportSummaryTitle">Итоги месяца</h3><span class="badge ok" id="reportUpdated">Обновлено сегодня</span></div><p class="empty-note" id="reportSummaryText">Отчёт готов. Нажмите кнопку выше, чтобы экспортировать его.</p></div></section>
+    </main>
+  </div>
+  <div class="toast" id="toast">Уведомление</div>
+  <div class="modal-backdrop" id="productModal" aria-hidden="true"><form class="modal" id="productForm"><div class="modal-head"><div><h2 id="modalTitle">Добавить товар</h2><p id="modalSubtitle">Введите данные товара</p></div><button class="close-btn" id="closeModalBtn" type="button">×</button></div><div class="form-grid"><div class="form-field"><label id="typeLabel" for="productType">Тип товара</label><select id="productType"><option value="Экран">Экран</option><option value="Батарея">Батарея</option><option value="Телефон">Телефон</option><option value="Задняя крышка">Задняя крышка</option></select></div><div class="form-field"><label id="brandLabel" for="productBrand">Бренд</label><select id="productBrand"><option value="">Выберите бренд</option><option value="Samsung">Samsung</option><option value="Redmi">Redmi</option><option value="Honor">Honor</option><option value="Realme">Realme</option><option value="Vivo">Vivo</option><option value="Tecno">Tecno</option><option value="OPPO">OPPO</option><option value="Huawei">Huawei</option><option value="OnePlus">OnePlus</option><option value="Apple">Apple</option><option value="Xiaomi">Xiaomi</option></select></div><div class="form-field"><label id="modelLabel" for="productModel">Модель</label><input id="productModel" placeholder="Например: iPhone 15 Pro"></div><div class="form-field"><label id="codeLabel" for="productCode">Код товара</label><input id="productCode" placeholder="PH-APP-IPHONE15PRO" readonly></div><div class="form-field"><label id="boughtLabel" for="productBought">Закуплено товара</label><input id="productBought" type="number" min="0" value="1" required></div><div class="form-field"><label id="stockLabel" for="productStock">Количество на складе</label><input id="productStock" type="number" min="0" value="1" required></div><div class="form-field"><label id="buyPriceLabel" for="productBuyPrice">Цена закупки</label><input id="productBuyPrice" type="number" min="0" placeholder="4500000" required></div><div class="form-field"><label id="priceLabel" for="productPrice">Цена продажи</label><input id="productPrice" type="number" min="0" placeholder="14500000" required></div><div class="form-field"><label id="profitLabel" for="productProfit">Ожидаемая прибыль</label><input id="productProfit" type="text" readonly value="0 сум"></div><div class="form-field"><label id="thresholdLabel" for="productThreshold">Порог остатка</label><input id="productThreshold" type="number" min="1" value="5" required></div></div><div class="modal-actions"><button class="secondary-btn" id="cancelModalBtn" type="button">Отмена</button><button class="primary-btn" id="saveProductBtn" type="submit">Сохранить</button></div></form></div>
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const loginScreen = document.getElementById('loginScreen');
+    const toast = document.getElementById('toast');
+    const formatMoney = (value) => `${Number(value || 0).toLocaleString('ru-RU')} сум`;
+    const showToast = (message) => { toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); };
+    const productLabels = {
+      ru: { add: 'Добавить товар', title: 'Добавить товар', subtitle: 'Введите данные товара', type: 'Тип товара', brand: 'Бренд', model: 'Модель', code: 'Код товара', bought: 'Закуплено товара', stock: 'Количество на складе', buyPrice: 'Цена закупки', price: 'Цена продажи', profit: 'Ожидаемая прибыль', threshold: 'Порог остатка', cancel: 'Отмена', save: 'Сохранить', phone: 'Телефон', screen: 'Экран', battery: 'Батарея', backCover: 'Задняя крышка', required: 'Заполните модель, количество и цену', saved: 'Товар добавлен на склад' }
+    };
+    const registrationLabels = { first: 'Имя', last: 'Фамилия', phone: 'Номер телефона', firstPlaceholder: 'Алексей', lastPlaceholder: 'Каримов', phonePlaceholder: '+998 90 000 00 00' };
+    const viewLabels = {
+      ru: { inventory: ['Остатки на складе', 'Управляйте всеми телефонами и OLED-экранами на складе.', 'Все товары', 'шт. на складе', 'Мало на складе', 'моделей требуют проверки', 'Стоимость склада', 'руб. общая стоимость', 'Товар', 'Тип', 'Размер / память', 'Код', 'Остаток', 'Статус', 'Норма', 'Мало'], sales: ['Продажи', 'Контролируйте все продажи телефонов и OLED-экранов.', 'Новая продажа', 'Продажи сегодня', 'Количество продаж', 'операций сегодня', 'Средний чек', 'руб. за продажу', 'Товар', 'Клиент', 'Дата', 'Сумма', 'Статус'], reports: ['Отчёты', 'Просматривайте отчёты по складу и продажам в одном месте.', 'Экспортировать отчёт', 'Доход за месяц', 'руб. рассчитанная прибыль', 'Оборот склада', 'эффективность месяца', 'Лидер продаж', 'шт. в этом месяце', 'Итоги месяца', 'Обновлено сегодня', 'Отчёт готов. Нажмите кнопку выше, чтобы экспортировать его.'] }
+    };
+    const languageText = {
+      ru: {
+        loginTitle: 'OLED SERVICE', loginIntro: 'Управляйте складом из одного места.<br>Все расчёты всегда под контролем.', register: 'Зарегистрироваться <span>→</span>', note: 'Продолжая, вы принимаете условия сервиса', menu: 'Основное меню', dashboard: 'Панель управления', inventory: 'Остатки на складе', sales: 'Продажи', reports: 'Отчёты', help: 'Есть вопросы?<br>Мы готовы помочь.', helpBtn: 'Получить помощь', breadcrumb: 'Главная <span>/</span> <b>Панель управления</b>', welcome: 'Здравствуйте, Admin <span>👋</span>', welcomeText: 'Сводка состояния склада на сегодня.', date: '◷ &nbsp; 19 сентября, 2026', total: 'Всего товаров', today: 'Продажи сегодня', pending: 'Ожидаемые заказы', low: 'Мало на складе', monthChange1: '<span class="up">↑ 8.4%</span> &nbsp; к прошлому месяцу', monthChange2: '<span class="up">↑ 12.6%</span> &nbsp; к прошлому месяцу', delivery: 'Ожидается доставка', check: '<span style="color:var(--red);font-weight:700">Нужна проверка</span> &nbsp; сейчас', chart: 'Динамика продаж', period: 'Этот месяц⌄', lowProducts: 'Товары с низким остатком', all: 'Все →', recent: 'Последние продажи', allSales: 'Посмотреть все →', product: 'Товар', customer: 'Клиент', saleDate: 'Дата', amount: 'Сумма', status: 'Статус', done: 'Завершено', checking: 'На проверке', stockUnit: 'шт.', todayDate: 'Сегодня', yesterdayDate: 'Вчера', currency: 'сум', chartDays: ['01 сент.', '07 сент.', '14 сент.', '21 сент.', '28 сент.'], welcomeToast: 'Добро пожаловать! Панель готова.', notification: 'Доступно 3 новых уведомления', selected: ' выбран', helpToast: 'Служба поддержки: +998 71 200 00 00'
+      }
+    };
+    languageText.tg = { ...languageText.ru, loginIntro: 'Анборро аз як ҷо идора кунед.<br>Ҳамаи ҳисобҳо ҳамеша зери назоратанд.', register: 'Сабти ном <span>→</span>', note: 'Бо идома додан, шумо шартҳои хизматрасониро қабул мекунед', menu: 'Менюи асосӣ', dashboard: 'Панели идоракунӣ', inventory: 'Бақияи анбор', sales: 'Фурӯш', reports: 'Ҳисоботҳо', help: 'Савол доред?<br>Мо омодаи кӯмак ҳастем.', helpBtn: 'Кӯмак гирифтан', breadcrumb: 'Асосӣ <span>/</span> <b>Панели идоракунӣ</b>', welcome: 'Салом, Admin <span>👋</span>', welcomeText: 'Хулосаи ҳолати анбор барои имрӯз.', total: 'Ҳамаи молҳо', today: 'Фурӯши имрӯз', pending: 'Фармоишҳои интизорӣ', low: 'Кам дар анбор', delivery: 'Расонидан интизор аст', check: '<span style="color:var(--red);font-weight:700">Санҷиш лозим</span> &nbsp; ҳозир', chart: 'Динамикаи фурӯш', period: 'Ин моҳ⌄', lowProducts: 'Молҳои каммонда', all: 'Ҳама →', recent: 'Фурӯшҳои охирин', allSales: 'Ҳамаашро дидан →', product: 'Мол', customer: 'Мизоҷ', saleDate: 'Сана', amount: 'Маблағ', status: 'Ҳолат', done: 'Анҷом ёфт', checking: 'Дар санҷиш', stockUnit: 'дона', todayDate: 'Имрӯз', yesterdayDate: 'Дирӯз', currency: 'сомонӣ', welcomeToast: 'Хуш омадед! Панел омода аст.', notification: '3 огоҳии нав дастрас аст', selected: ' интихоб шуд', helpToast: 'Хадамоти дастгирӣ: +992 93 991 11 99' };
+    productLabels.tg = { ...productLabels.ru, add: 'Иловаи мол', title: 'Иловаи мол', subtitle: 'Маълумоти молро ворид кунед', type: 'Навъи мол', brand: 'Бренд', model: 'Модел', code: 'Рамзи мол', bought: 'Харидашуда', stock: 'Миқдор дар анбор', buyPrice: 'Нархи харид', price: 'Нархи фурӯш', profit: 'Фоидаи интизорӣ', threshold: 'Ҳадди бақия', cancel: 'Бекор кардан', save: 'Нигоҳ доштан', required: 'Модел, миқдор ва нархро пур кунед', saved: 'Мол ба анбор илова шуд' };
+    viewLabels.tg = viewLabels.ru;
+    const setText = (selector, value, html = false) => { const element = document.querySelector(selector); if (element) html ? element.innerHTML = value : element.textContent = value; };
+    const updateLanguage = (language) => {
+      const text = languageText[language];
+      const registration = registrationLabels; setText('#firstNameLabel', registration.first); setText('#lastNameLabel', registration.last); setText('#phoneLabel', registration.phone); document.getElementById('firstName').placeholder = registration.firstPlaceholder; document.getElementById('lastName').placeholder = registration.lastPlaceholder; document.getElementById('phone').placeholder = registration.phonePlaceholder;
+      setText('.login-glass h1', text.loginTitle); setText('.login-glass > p:first-of-type', text.loginIntro, true); setText('.login-btn', text.register, true); setText('.login-note', text.note);
+      setText('.nav-label', text.menu); setText('.nav-item:nth-child(1) span:last-child', text.dashboard); setText('.nav-item:nth-child(2) span:last-child', text.inventory); setText('.nav-item:nth-child(3) span:last-child', text.sales); setText('.nav-item:nth-child(4) span:last-child', text.reports); setText('.help p', text.help, true); setText('#helpBtn span:last-child', text.helpBtn); setText('#breadcrumb', text.breadcrumb, true); setText('#welcomeTitle', text.welcome, true); setText('#welcomeText', text.welcomeText); setText('#dateLabel', text.date, true);
+      ['total', 'today', 'pending', 'low'].forEach((key, index) => setText(`.stat:nth-child(${index + 1}) .stat-top span:first-child`, text[key]));
+      setText('.stat:nth-child(1) .stat-foot', text.monthChange1, true); setText('.stat:nth-child(2) .stat-foot', text.monthChange2, true); setText('.stat:nth-child(3) .stat-foot', text.delivery); setText('.stat:nth-child(4) .stat-foot', text.check, true);
+      setText('.panel-head h3', text.chart); setText('#periodBtn', text.period); setText('.section-grid .panel:nth-child(2) .panel-head h3', text.lowProducts); setText('.section-grid .panel:nth-child(2) .panel-head a', text.all); setText('.table-panel .panel-head h3', text.recent); setText('.table-panel .panel-head a', text.allSales);
+      document.querySelectorAll('.stock-row:not([data-product]) .stock-num').forEach((stock, index) => stock.textContent = ['4', '8', '11'][index] + ' ' + text.stockUnit); document.querySelectorAll('.stock-row[data-product] .stock-num').forEach((stock) => stock.textContent = stock.dataset.quantity + ' ' + text.stockUnit); document.querySelectorAll('.chart-labels span').forEach((label, index) => label.textContent = text.chartDays[index]); document.querySelectorAll('tbody tr td:nth-child(3)').forEach((cell, index) => cell.textContent = index === 2 ? text.yesterdayDate + ', 18:20' : text.todayDate + (index === 0 ? ', 14:32' : ', 11:08')); document.querySelectorAll('tbody tr td:nth-child(4)').forEach((cell) => { const amount = Number(String(cell.textContent).replace(/[^0-9]/g, '') || 0); cell.textContent = formatMoney(amount); }); document.querySelectorAll('th').forEach((header, index) => header.textContent = [text.product, text.customer, text.saleDate, text.amount, text.status][index]); document.querySelectorAll('.badge.ok').forEach((badge) => badge.textContent = text.done); document.querySelectorAll('.badge.low').forEach((badge) => badge.textContent = text.checking);
+      document.documentElement.lang = language === 'tg' ? 'tg' : 'ru';
+      const product = productLabels[language]; setText('#addProductLabel', product.add); setText('#modalTitle', product.title); setText('#modalSubtitle', product.subtitle); setText('#typeLabel', product.type); setText('#brandLabel', product.brand); setText('#modelLabel', product.model); setText('#codeLabel', product.code); setText('#boughtLabel', product.bought); setText('#stockLabel', product.stock); setText('#buyPriceLabel', product.buyPrice); setText('#priceLabel', product.price); setText('#profitLabel', product.profit); setText('#thresholdLabel', product.threshold); setText('#cancelModalBtn', product.cancel); setText('#saveProductBtn', product.save); setText('#productType option:nth-child(1)', product.screen); setText('#productType option:nth-child(2)', product.battery); setText('#productType option:nth-child(3)', product.phone); setText('#productType option:nth-child(4)', product.backCover);
+      const views = viewLabels[language]; const inventory = views.inventory; const sales = views.sales; const reports = views.reports; setText('#inventoryTitle', inventory[0]); setText('#inventoryText', inventory[1]); setText('#inventoryView .add-view-product span', product.add); setText('#inventoryCountTitle', inventory[2]); setText('#inventoryCountText', inventory[3]); setText('#inventoryLowTitle', inventory[4]); setText('#inventoryLowText', inventory[5]); setText('#inventoryValueTitle', inventory[6]); setText('#inventoryValueText', inventory[7]); setText('#inventoryView th:nth-child(1)', inventory[8]); setText('#inventoryView th:nth-child(2)', inventory[9]); setText('#inventoryView th:nth-child(3)', inventory[10]); setText('#inventoryView th:nth-child(4)', inventory[11]); setText('#inventoryView th:nth-child(5)', inventory[12]); setText('#inventoryView th:nth-child(6)', inventory[13]); setText('#inventoryView .badge.ok', inventory[14]); setText('#inventoryView .badge.low', inventory[15]);
+      setText('#salesTitle', sales[0]); setText('#salesText', sales[1]); setText('#newSaleBtn span', sales[2]); setText('#salesTodayTitle', sales[3]); setText('#salesCountTitle', sales[4]); setText('#salesCountText', sales[5]); setText('#salesAverageTitle', sales[6]); setText('#salesAverageText', sales[7]); setText('#salesView th:nth-child(1)', sales[8]); setText('#salesView th:nth-child(2)', sales[9]); setText('#salesView th:nth-child(3)', sales[10]); setText('#salesView th:nth-child(4)', sales[11]); setText('#salesView th:nth-child(5)', sales[12]);
+      setText('#reportsTitle', reports[0]); setText('#reportsText', reports[1]); setText('#exportLabel', reports[2]); setText('#reportProfitTitle', reports[3]); setText('#reportProfitText', reports[4]); setText('#reportStockTitle', reports[5]); setText('#reportStockText', reports[6]); setText('#reportBestTitle', reports[7]); setText('#reportBestText', reports[8]); setText('#reportSummaryTitle', reports[9]); setText('#reportUpdated', reports[10]); setText('#reportSummaryText', reports[11]);
+      window.currentLanguage = language;
+      localStorage.setItem('oledLanguage', language);
+      const languageSelect = document.getElementById('languageSelect');
+      if (languageSelect) languageSelect.value = language;
+    };
+    updateLanguage('ru');
+    const profileBtn = document.getElementById('profileBtn');
+    const profileMenu = document.getElementById('profileMenu');
+    const languageSelect = document.getElementById('languageSelect');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const closeProfileMenu = () => { profileMenu.classList.remove('open'); profileBtn.setAttribute('aria-expanded', 'false'); profileMenu.setAttribute('aria-hidden', 'true'); };
+    profileBtn.addEventListener('click', (event) => { event.stopPropagation(); const open = profileMenu.classList.toggle('open'); profileBtn.setAttribute('aria-expanded', String(open)); profileMenu.setAttribute('aria-hidden', String(!open)); });
+    profileBtn.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); profileBtn.click(); } });
+    languageSelect.addEventListener('change', () => updateLanguage(languageSelect.value));
+    logoutBtn.addEventListener('click', () => { localStorage.removeItem('oledCustomer'); loginForm.reset(); document.getElementById('profileName').textContent = 'Admin Service'; document.getElementById('profileAvatar').textContent = 'AS'; document.getElementById('userPhone').textContent = ''; closeProfileMenu(); loginScreen.classList.remove('login-hide'); showToast('Вы вышли из аккаунта'); });
+    document.addEventListener('click', (event) => { if (!event.target.closest('.profile-wrap')) closeProfileMenu(); });
+    const PRODUCT_STORAGE_KEY = 'oledProducts';
+    const DATABASE_NAME = 'oledServiceDatabase';
+    const DATABASE_VERSION = 1;
+    let database;
+    let storedProducts = [];
+    const openDatabase = () => new Promise((resolve, reject) => {
+      const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
+      request.onupgradeneeded = () => {
+        const nextDatabase = request.result;
+        if (!nextDatabase.objectStoreNames.contains('products')) nextDatabase.createObjectStore('products', { keyPath: 'id', autoIncrement: true });
+        if (!nextDatabase.objectStoreNames.contains('settings')) nextDatabase.createObjectStore('settings', { keyPath: 'key' });
+      };
+      request.onsuccess = () => { database = request.result; resolve(database); };
+      request.onerror = () => reject(request.error);
+    });
+    const readProductsFromDatabase = () => new Promise((resolve, reject) => {
+      const request = database.transaction('products', 'readonly').objectStore('products').getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+    const replaceProductsInDatabase = (products) => new Promise((resolve, reject) => {
+      const transaction = database.transaction('products', 'readwrite');
+      const store = transaction.objectStore('products');
+      store.clear();
+      products.forEach((product) => store.add({ ...product, id: product.id || undefined }));
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+    });
+    const migrateOldProducts = async () => {
+      const productsInDatabase = await readProductsFromDatabase();
+      if (productsInDatabase.length) {
+        localStorage.removeItem(PRODUCT_STORAGE_KEY);
+        return productsInDatabase;
+      }
+      try {
+        const oldProducts = JSON.parse(localStorage.getItem(PRODUCT_STORAGE_KEY) || '[]');
+        if (Array.isArray(oldProducts) && oldProducts.length) {
+          await replaceProductsInDatabase(oldProducts);
+          localStorage.removeItem(PRODUCT_STORAGE_KEY);
+          return readProductsFromDatabase();
+        }
+      } catch (error) {
+        console.warn('Не удалось перенести старые данные склада:', error);
+      }
+      return [];
+    };
+    const saveStoredProducts = async () => {
+      if (database) await replaceProductsInDatabase(storedProducts);
+    };
+    const initializeDatabase = async () => {
+      try {
+        await openDatabase();
+        storedProducts = await migrateOldProducts();
+        syncDashboard();
+      } catch (error) {
+        console.error('База данных склада недоступна:', error);
+        showToast('Не удалось открыть базу склада');
+      }
+    };
+    const safeNumber = (value) => Number(value || 0);
+    const renderLowStockList = () => {
+      const stockList = document.querySelector('.stock-list');
+      if (!stockList) return;
+
+      const lowProducts = storedProducts
+        .filter((product) => safeNumber(product.stock) <= safeNumber(product.threshold))
+        .sort((a, b) => safeNumber(a.stock) - safeNumber(b.stock))
+        .slice(0, 3);
+
+      if (!lowProducts.length) {
+        stockList.innerHTML = '<div class="stock-row"><div><div class="stock-name">Нет товаров</div><div class="stock-detail">Добавьте товар, чтобы увидеть остатки</div></div><div class="stock-num">0 шт.</div><div class="alert"></div></div>';
+        return;
+      }
+
+      const widthFor = (product) => {
+        const stock = safeNumber(product.stock);
+        const threshold = safeNumber(product.threshold);
+        if (threshold <= 0) return 100;
+        return Math.min(100, Math.max(12, Math.round((stock / Math.max(threshold, 1)) * 100)));
+      };
+
+      stockList.innerHTML = lowProducts.map((product) => {
+        const stock = safeNumber(product.stock);
+        const threshold = safeNumber(product.threshold);
+        const rowClass = stock <= threshold ? 'danger' : 'warn';
+        return `
+          <div class="stock-row">
+            <div>
+              <div class="stock-name">${(product.brand || 'Без бренда') + ' ' + (product.model || 'Без модели') }</div>
+              <div class="stock-detail">${product.type || 'Товар'} · ${product.code || 'без кода'}</div>
+              <div class="bar"><div class="fill ${rowClass}" style="width:${widthFor(product)}%"></div></div>
+            </div>
+            <div class="stock-num" data-quantity="${stock}">${stock} ${languageText[window.currentLanguage].stockUnit}</div>
+            <div class="alert">${stock <= threshold ? '!' : ''}</div>
+          </div>
+        `;
+      }).join('');
+    };
+    const syncDashboard = () => {
+      const totalUnits = storedProducts.reduce((sum, product) => sum + safeNumber(product.stock), 0);
+      const lowUnits = storedProducts.filter((product) => safeNumber(product.stock) <= safeNumber(product.threshold)).length;
+      const stockValue = storedProducts.reduce((sum, product) => sum + (safeNumber(product.stock) * safeNumber(product.buyPrice)), 0);
+      const dailySales = storedProducts.reduce((sum, product) => sum + (safeNumber(product.price) * safeNumber(product.stock) * 0.18), 0);
+      const weeklySales = storedProducts.reduce((sum, product) => sum + (safeNumber(product.price) * safeNumber(product.stock) * 0.42), 0);
+      const monthlySales = storedProducts.reduce((sum, product) => sum + (safeNumber(product.price) * safeNumber(product.stock) * 0.92), 0);
+      const monthlyCost = storedProducts.reduce((sum, product) => sum + (safeNumber(product.buyPrice) * safeNumber(product.stock) * 0.92), 0);
+      const monthlyProfit = monthlySales - monthlyCost;
+      const profitability = monthlyCost > 0 ? (monthlyProfit / monthlyCost) * 100 : 0;
+      const salesCount = Math.max(0, Math.round(storedProducts.reduce((sum, product) => sum + safeNumber(product.stock), 0) / 3));
+      const avgCheck = salesCount ? monthlySales / salesCount : 0;
+      const bestProduct = storedProducts.reduce((best, product) => {
+        const currentValue = safeNumber(product.price) * safeNumber(product.stock);
+        return currentValue > best.value ? { name: `${product.brand || ''} ${product.model || ''}`.trim() || 'Нет данных', value: currentValue } : best;
+      }, { name: '0', value: 0 });
+      const statBlocks = document.querySelectorAll('.stat h2');
+      if (statBlocks.length >= 4) {
+        statBlocks[0].textContent = totalUnits.toLocaleString('ru-RU');
+        statBlocks[1].textContent = formatMoney(dailySales).replace(' сум', '');
+        statBlocks[2].textContent = String(salesCount);
+        statBlocks[3].textContent = String(lowUnits);
+      }
+      const inventoryCount = document.getElementById('inventoryCount');
+      if (inventoryCount) inventoryCount.textContent = totalUnits.toLocaleString('ru-RU');
+      const inventoryLow = document.querySelector('#inventoryView strong[style*="var(--red)"]');
+      if (inventoryLow) inventoryLow.textContent = String(lowUnits);
+      const inventoryValue = document.querySelector('#inventoryValueTitle')?.closest('.view-card')?.querySelector('strong');
+      if (inventoryValue) inventoryValue.textContent = formatMoney(stockValue).replace(' сум', '');
+      const salesViewStrong = document.querySelectorAll('#salesView .view-card strong');
+      if (salesViewStrong.length >= 3) {
+        salesViewStrong[0].textContent = formatMoney(dailySales).replace(' сум', '');
+        salesViewStrong[1].textContent = String(salesCount);
+        salesViewStrong[2].textContent = formatMoney(avgCheck).replace(' сум', '');
+      }
+      const reportViewStrong = document.querySelectorAll('#reportsView .view-card strong');
+      if (reportViewStrong.length >= 3) {
+        reportViewStrong[0].textContent = formatMoney(monthlySales).replace(' сум', '');
+        reportViewStrong[1].textContent = `${Math.min(100, Math.max(0, Math.round((monthlySales / Math.max(1, stockValue || 1)) * 100)))}%`;
+        reportViewStrong[2].textContent = bestProduct.name || '0';
+      }
+      const reportBestText = document.getElementById('reportBestText');
+      if (reportBestText) reportBestText.textContent = `${Math.max(0, Math.round((bestProduct.value || 0) / 100000))} шт. в этом месяце`;
+      const monthRevenue = document.getElementById('monthRevenue');
+      const monthCost = document.getElementById('monthCost');
+      const monthProfit = document.getElementById('monthProfit');
+      const monthMargin = document.getElementById('monthMargin');
+      if (monthRevenue) monthRevenue.textContent = formatMoney(monthlySales);
+      if (monthCost) monthCost.textContent = formatMoney(monthlyCost);
+      if (monthProfit) monthProfit.textContent = formatMoney(monthlyProfit);
+      if (monthMargin) monthMargin.textContent = `${profitability.toLocaleString('ru-RU', { maximumFractionDigits: 1 })}%`;
+      renderLowStockList();
+      const inventoryTable = document.getElementById('inventoryTableBody');
+      if (inventoryTable) {
+        inventoryTable.innerHTML = storedProducts.length ? storedProducts.map((product) => `
+          <tr>
+            <td>${product.brand || 'Без бренда'} ${product.model || 'Без модели'}</td>
+            <td>${product.type || 'Товар'}</td>
+            <td>${safeNumber(product.stock)} шт.</td>
+            <td>${product.code || '—'}</td>
+            <td>${safeNumber(product.stock)}</td>
+            <td><span class="badge ${safeNumber(product.stock) <= safeNumber(product.threshold) ? 'low' : 'ok'}">${safeNumber(product.stock) <= safeNumber(product.threshold) ? 'Мало' : 'Норма'}</span></td>
+          </tr>
+        `).join('') : '<tr><td colspan="6">Нет данных</td></tr>';
+      }
+      const salesRows = document.querySelectorAll('#salesView tbody tr');
+      if (salesRows.length) {
+        salesRows.forEach((row, index) => {
+          const amountCell = row.querySelector('td:nth-child(4)');
+          if (amountCell) {
+            const value = [dailySales, weeklySales, monthlySales][index] || 0;
+            amountCell.textContent = formatMoney(value);
+          }
+        });
+      }
+      const recentSales = document.querySelectorAll('.panel.table-panel .money');
+      recentSales.forEach((cell, index) => {
+        const value = [dailySales, weeklySales, monthlySales][index] || 0;
+        cell.textContent = formatMoney(value);
+      });
+      document.getElementById('reportProfitText')?.replaceChildren(document.createTextNode('руб. рассчитанная прибыль'));
+    };
+    const calendarState = { date: new Date(2026, 8, 19), month: new Date(2026, 8, 1) };
+    const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+    const renderCalendar = () => {
+      const year = calendarState.month.getFullYear();
+      const month = calendarState.month.getMonth();
+      const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const daysInPreviousMonth = new Date(year, month, 0).getDate();
+      const title = document.getElementById('calendarTitle');
+      const days = document.getElementById('calendarDays');
+      if (!title || !days) return;
+      title.textContent = `${monthNames[month]} ${year}`;
+      days.innerHTML = '';
+      for (let index = 0; index < 42; index += 1) {
+        const dayOffset = index - firstDay + 1;
+        const date = new Date(year, month, dayOffset);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'calendar-day';
+        button.textContent = String(date.getDate());
+        if (index < firstDay) {
+          button.classList.add('muted');
+          button.textContent = String(daysInPreviousMonth - firstDay + index + 1);
+        } else if (dayOffset > daysInMonth) {
+          button.classList.add('muted');
+        }
+        if (date.toDateString() === new Date(2026, 8, 19).toDateString()) button.classList.add('today');
+        if (date.toDateString() === calendarState.date.toDateString()) button.classList.add('selected');
+        button.addEventListener('click', () => {
+          calendarState.date = date;
+          calendarState.month = new Date(date.getFullYear(), date.getMonth(), 1);
+          document.getElementById('dateLabel').innerHTML = `◷ &nbsp; ${date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+          renderCalendar();
+        });
+        days.appendChild(button);
+      }
+    };
+    const calendarPopover = document.getElementById('calendarPopover');
+    const dateLabel = document.getElementById('dateLabel');
+    dateLabel.addEventListener('click', (event) => { event.stopPropagation(); const open = calendarPopover.classList.toggle('open'); dateLabel.classList.toggle('active', open); dateLabel.setAttribute('aria-expanded', String(open)); calendarPopover.setAttribute('aria-hidden', String(!open)); if (open) renderCalendar(); });
+    document.getElementById('calendarPrev').addEventListener('click', () => { calendarState.month.setMonth(calendarState.month.getMonth() - 1); renderCalendar(); });
+    document.getElementById('calendarNext').addEventListener('click', () => { calendarState.month.setMonth(calendarState.month.getMonth() + 1); renderCalendar(); });
+    document.addEventListener('click', (event) => { if (!event.target.closest('.date-wrap')) { calendarPopover.classList.remove('open'); dateLabel.classList.remove('active'); dateLabel.setAttribute('aria-expanded', 'false'); calendarPopover.setAttribute('aria-hidden', 'true'); } });
+    initializeDatabase();
+    loginForm.addEventListener('submit', (event) => { event.preventDefault(); const firstName = document.getElementById('firstName').value.trim(); const lastName = document.getElementById('lastName').value.trim(); const phone = document.getElementById('phone').value.trim(); const fullName = `${firstName} ${lastName}`; document.getElementById('profileName').textContent = fullName; document.getElementById('profileAvatar').textContent = `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase(); document.getElementById('userPhone').textContent = phone; localStorage.setItem('oledCustomer', JSON.stringify({ firstName, lastName, phone })); loginScreen.classList.add('login-hide'); showToast(languageText.ru.welcomeToast); });
+    document.getElementById('bellBtn').addEventListener('click', () => showToast(languageText[window.currentLanguage].notification));
+    document.getElementById('helpBtn').addEventListener('click', () => showToast(languageText[window.currentLanguage].helpToast));
+    document.getElementById('periodBtn').addEventListener('click', () => showToast(languageText[window.currentLanguage].period));
+    const switchView = (view) => { document.querySelectorAll('.app-view, #dashboardView').forEach((section) => section.classList.remove('active')); document.getElementById(view === 'dashboard' ? 'dashboardView' : `${view}View`).classList.add('active'); document.querySelectorAll('.nav-item').forEach((nav) => nav.classList.toggle('active', nav.dataset.view === view)); };
+    document.querySelectorAll('.nav-item').forEach((item) => item.addEventListener('click', () => { switchView(item.dataset.view); showToast(item.querySelector('span:last-child').textContent + languageText[window.currentLanguage].selected); }));
+    document.querySelectorAll('[data-view-link]').forEach((link) => link.addEventListener('click', () => switchView(link.dataset.viewLink)));
+    document.querySelectorAll('.add-view-product').forEach((button) => button.addEventListener('click', () => { switchView('dashboard'); document.getElementById('addProductBtn').click(); }));
+    document.getElementById('newSaleBtn').addEventListener('click', () => showToast(window.currentLanguage === 'ru' ? 'Форма новой продажи откроется здесь' : 'Формаи фурӯши нав дар ин ҷо кушода мешавад'));
+    document.getElementById('exportBtn').addEventListener('click', () => showToast(window.currentLanguage === 'ru' ? 'Отчёт подготовлен для экспорта' : 'Ҳисобот барои содир омода аст'));
+    const productModal = document.getElementById('productModal'); const productForm = document.getElementById('productForm');
+    const closeProductModal = () => { productModal.classList.remove('open'); productModal.setAttribute('aria-hidden', 'true'); };
+    const phoneModels = {
+      Apple: ['iPhone 15', 'iPhone 15 Pro', 'iPhone 15 Pro Max', 'iPhone 16', 'iPhone 16 Pro', 'iPhone 16 Plus', 'iPhone 16e', 'iPhone 14', 'iPhone 14 Pro', 'iPhone 14 Pro Max', 'iPhone 13', 'iPhone 13 Pro', 'iPhone 13 Pro Max'],
+      Samsung: ['Galaxy S24', 'Galaxy S24 Ultra', 'Galaxy S23', 'Galaxy S23 Ultra', 'Galaxy S22', 'Galaxy S22 Ultra', 'Galaxy A54', 'Galaxy A34', 'Galaxy Note 20', 'Galaxy Z Fold5', 'Galaxy Z Flip5', 'Galaxy M54', 'Galaxy A15'],
+      Xiaomi: ['Redmi Note 12', 'Redmi Note 13', 'Redmi Note 14', 'Mi 13', 'Mi 14', 'Poco X6', 'Poco F5', 'Poco M6', 'Xiaomi 14', 'Xiaomi 14 Pro', 'Xiaomi 13T', 'Xiaomi 12'],
+      Huawei: ['P60 Pro', 'Pura 70', 'Nova 11', 'Mate 50 Pro', 'Mate 60', 'Mate 40 Pro', 'Y9a', 'Y9 Prime', 'P50 Pro', 'Nova 9'],
+      OnePlus: ['OnePlus 12', 'OnePlus 12R', 'OnePlus 11', 'OnePlus 10T', 'OnePlus Nord 3', 'OnePlus Nord CE4', 'OnePlus Ace 3', 'OnePlus 9 Pro', 'OnePlus 8T'],
+      Realme: ['Realme 12 Pro', 'Realme 11 Pro', 'Realme GT Neo 5', 'Realme Narzo 70', 'Realme C65', 'Realme 10', 'Realme 9 Pro', 'Realme 8 Pro'],
+      LG: ['LG Velvet', 'LG Wing', 'LG G8 ThinQ', 'LG Q70', 'LG Stylo 6', 'LG K62', 'LG V60 ThinQ', 'LG G7 ThinQ'],
+      Nokia: ['Nokia G60', 'Nokia X30', 'Nokia C32', 'Nokia 2780 Flip', 'Nokia 8.3', 'Nokia G50', 'Nokia C12', 'Nokia 5.4']
+    };
+    const updateModelOptions = () => {
+      const type = document.getElementById('productType').value;
+      const brand = document.getElementById('productBrand').value;
+      const modelInput = document.getElementById('productModel');
+      if (type === 'Телефон' && brand && phoneModels[brand]) {
+        modelInput.placeholder = `Например: ${phoneModels[brand][0]}`;
+      } else {
+        modelInput.placeholder = 'Например: OLED C3 55';
+      }
+      updateProductCode();
+    };
+    const updateProductCode = () => {
+      const brand = document.getElementById('productBrand').value.trim();
+      const model = document.getElementById('productModel').value.trim();
+      const type = document.getElementById('productType').value;
+      const codeField = document.getElementById('productCode');
+      if (!brand && !model) {
+        codeField.value = '';
+        return;
+      }
+      const brandCode = brand ? brand.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() : 'GEN';
+      const modelCode = model ? model.replace(/[^A-Za-z0-9]/g, '').slice(0, 10).toUpperCase() : 'MODEL';
+      let prefix = 'GEN';
+      if (type === 'Телефон') prefix = 'PH';
+      else if (type === 'Экран') prefix = 'SCR';
+      else if (type === 'Батарея') prefix = 'BAT';
+      else if (type === 'Задняя крышка') prefix = 'CAS';
+      codeField.value = `${prefix}-${brandCode}-${modelCode}`;
+    };
+    const updateProfit = () => {
+      const buyPrice = Number(document.getElementById('productBuyPrice').value || 0);
+      const sellPrice = Number(document.getElementById('productPrice').value || 0);
+      const bought = Number(document.getElementById('productBought').value || 0);
+      const profit = (sellPrice - buyPrice) * bought;
+      document.getElementById('productProfit').value = formatMoney(profit);
+    };
+    document.getElementById('addProductBtn').addEventListener('click', () => { productModal.classList.add('open'); productModal.setAttribute('aria-hidden', 'false'); document.getElementById('productModel').focus(); });
+    document.getElementById('closeModalBtn').addEventListener('click', closeProductModal); document.getElementById('cancelModalBtn').addEventListener('click', closeProductModal); productModal.addEventListener('click', (event) => { if (event.target === productModal) closeProductModal(); });
+    document.getElementById('productType').addEventListener('change', updateModelOptions);
+    document.getElementById('productBrand').addEventListener('change', updateModelOptions);
+    document.getElementById('productModel').addEventListener('input', updateProductCode);
+    ['productBuyPrice', 'productPrice', 'productBought'].forEach((id) => {
+      document.getElementById(id).addEventListener('input', updateProfit);
+    });
+    const addProductToUi = (product) => { renderLowStockList(); };
+    productForm.addEventListener('submit', async (event) => { event.preventDefault(); const product = { type: document.getElementById('productType').value, brand: document.getElementById('productBrand').value.trim(), model: document.getElementById('productModel').value.trim(), code: document.getElementById('productCode').value.trim(), bought: Number(document.getElementById('productBought').value), stock: Number(document.getElementById('productStock').value), buyPrice: Number(document.getElementById('productBuyPrice').value), price: Number(document.getElementById('productPrice').value), threshold: Number(document.getElementById('productThreshold').value), profit: Number((Number(document.getElementById('productPrice').value || 0) - Number(document.getElementById('productBuyPrice').value || 0)) * Number(document.getElementById('productBought').value || 0)) }; if (!product.model || product.stock < 0 || product.price < 0 || product.buyPrice < 0) { showToast(productLabels[window.currentLanguage].required); return; } storedProducts.push(product); await saveStoredProducts(); addProductToUi(product); syncDashboard(); closeProductModal(); productForm.reset(); document.getElementById('productBought').value = '1'; document.getElementById('productStock').value = '1'; document.getElementById('productThreshold').value = '5'; document.getElementById('productProfit').value = '0 сум'; showToast(productLabels[window.currentLanguage].saved); });
+  </script>
+</body>
+</html>
